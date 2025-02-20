@@ -18,10 +18,10 @@ class UrlService {
     return true;
   }
 
-  static async getOriginalUrl(shortUrlId) {
+  static async getOriginalUrlObject(shortUrlId) {
     if (!shortUrlId) return false;
-    const url = await URL.findOne({ shortUrl: shortUrlId });
-    return url ? url.userUrl : false;
+    const urlObj = await URL.findOne({ shortUrl: shortUrlId });
+    return urlObj ? urlObj : false;
   }
 
   static async deleteUrl(shortUrlId) {
