@@ -1,9 +1,8 @@
 const { INTERNAL_SERVER_ERROR } = require("../constants/constants");
 const UrlService = require("../service/UrlService");
-const {
-  generateShortUrl,
-  isValidUrl,
-} = require("../utils/urlUtils");
+const { checkIsUrlExpire } = require("../utils/dateUtils");
+const { isEmpty } = require("../utils/isEmpty");
+const { generateShortUrl, isValidUrl } = require("../utils/urlUtils");
 
 class UrlController {
   static async createShortUrl(req, res) {
@@ -24,13 +23,16 @@ class UrlController {
         });
       }
       const shortUrl = await generateShortUrl();
-      const isUrlUsed = await UrlService.getOriginalUrl(shortUrl);
-      if(isUrlUsed) {
+      const isUrlUsed = await UrlService.getOriginalUrlObject(shortUrl);
+      if (!isEmpty(isUrlUsed)) {
         return res.status(500).json({ error: "Please try again" });
       }
       await UrlService.addShortUrl(url, shortUrl);
-      return res.status(201).json({ shortUrl: `${process.env.BASE_URL}/${shortUrl}` });
+      return res
+        .status(201)
+        .json({ shortUrl: `${process.env.BASE_URL}/${shortUrl}` });
     } catch (err) {
+      console.log(err);
       return res.status(500).json({ error: INTERNAL_SERVER_ERROR });
     }
   }
@@ -38,9 +40,20 @@ class UrlController {
   static async redirectToOriginalUrl(req, res) {
     const { shortUrlId } = req.params;
     try {
-      const originalUrl = await UrlService.getOriginalUrl(shortUrlId);
-      if (!originalUrl) {
+      const originalUrlObj = await UrlService.getOriginalUrlObject(shortUrlId);
+      if (isEmpty(originalUrlObj)) {
         return res.status(404).json({ error: "Url not found" });
+      }
+      const originalUrl = originalUrlObj.userUrl;
+      const date = new Date();
+      const isUrlExpire = checkIsUrlExpire({
+        date,
+        expireDate: originalUrlObj.expireDate,
+      });
+      if (isUrlExpire) {
+        const shortUrlId = originalUrlObj.shortUrl;
+        await UrlService.deleteUrl(shortUrlId);
+        return res.status(404).json({ error: "Url expired" });
       }
       return res.redirect(originalUrl);
     } catch (err) {

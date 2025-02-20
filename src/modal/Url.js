@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { ONE_DAYS_TIME } = require("../constants/constants");
 
 const URLSchema = mongoose.Schema({
   userId: {
@@ -14,7 +15,7 @@ const URLSchema = mongoose.Schema({
   },
   expireDate: {
     type: Date,
-    default: Date.now() + 24 * 60 * 60 * 1000,
+    default: Date.now() + ONE_DAYS_TIME,
   },
 });
 
